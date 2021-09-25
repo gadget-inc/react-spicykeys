@@ -1,24 +1,57 @@
 import { belongsTo, characterFromEvent, eventModifiers, getKeyInfo, isModifier, Modifier, modifiersMatch } from "./helpers";
-import { Action } from "./Keymaps";
+import { EventType } from "./Keymaps";
 
+/**
+ * A function that gets called when a key combination is pressed. Is called with the final event that triggered the invocation, and the string combination that was matched.
+ **/
 export type SpicyKeysCallback = (event: KeyboardEvent, combo?: string) => void;
 
-type Handler = {
+/**
+ * A map from action names (any string) to callback functions to invoke when that action is invoked
+ * @example
+ * ```typescript
+ * {
+ *    SAVE: () => console.log("save action triggered"),
+ *    PASTE: () => console.log("paste action triggered"),
+ * }
+ * ```
+ */
+export interface ActionHandlerMap {
+  [actionName: string]: SpicyKeysCallback;
+}
+
+/**
+ * A map from action names (any string) to an array of key combination strings to trigger that action
+ * @example
+ * ```typescript
+ * {
+ *   SAVE: ["ctrl+s", "ctrl+shift+s"],
+ *   PASTE: ["mod+v"],
+ * }
+ * ```
+ */
+export interface ActionKeyCombinationMap {
+  [actionName: string]: string[];
+}
+
+type ActionHandler = {
   callback: SpicyKeysCallback;
   modifiers: Modifier[];
-  action: string;
+  eventType: string;
   seq?: string;
   level?: number;
   combo?: string;
 };
 
-export class HandlerMap {
+export class HandlerRegistry {
+  debugMode = true;
   protected root?: HTMLElement;
+
   private ignoreNextKeyup: false | string = false;
   private ignoreNextKeypress: boolean = false;
-  private handlers: { [character: string]: Handler[] } = {};
+  private handlers: { [character: string]: ActionHandler[] } = {};
   private sequenceLevels: { [sequence: string]: number } = {};
-  private nextExpectedAction: false | Action = false;
+  private nextExpectedEventName: false | EventType = false;
 
   constructor(root?: HTMLElement) {
     if (!root && typeof window != "undefined") {
@@ -41,10 +74,30 @@ export class HandlerMap {
     this.root.addEventListener("keypress", this.eventHandler);
     this.root.addEventListener("keydown", this.eventHandler);
     this.root.addEventListener("keyup", this.eventHandler);
+    this.debug("set keylistener root to", this.root);
   }
 
+  /** Registers new handlers in the registry */
+  register(combinationMap: ActionKeyCombinationMap, actionHandlerMap: ActionHandlerMap) {
+    for (const [action, keyCombos] of Object.entries(combinationMap)) {
+      const callback = actionHandlerMap[action];
+      if (!callback) {
+        throw new Error(
+          `No callback function found in handler map for action ${action} (referenced for key combinations ${keyCombos.join(", ")})`
+        );
+      }
+
+      for (const combination of keyCombos) {
+        this.bindSingle(combination, callback);
+      }
+    }
+  }
+
+  /** Removes existing handlers from the registry */
+  unregister(combinationMap: ActionKeyCombinationMap, actionHandlerMap: ActionHandlerMap) {}
+
   /** Event handler entrypoint called by the raw DOM event handlers */
-  eventHandler = (event: KeyboardEvent) => {
+  private eventHandler = (event: KeyboardEvent) => {
     // normalize e.which for key events
     // @see http://stackoverflow.com/questions/4285627/javascript-keycode-vs-charcode-utter-confusion
     if (typeof event.which !== "number") {
@@ -52,6 +105,7 @@ export class HandlerMap {
     }
 
     const character = characterFromEvent(event);
+    this.debug("handling event for character", { character, which: event.which, event });
 
     // no character found then stop
     if (!character) {
@@ -104,16 +158,18 @@ export class HandlerMap {
       if (!processedSequenceCallback) {
         this.fireCallback(handler, event);
       }
+
+      this.debug("handled key event with handler", event, handler);
     }
 
     // if the key you pressed matches the type of sequence without being a modifier (ie "keyup" or "keypress") then we should reset all sequences that were not matched by this event
     // this is so, for example, if you have the sequence "h a t" and you type "h e a r t" it does not match.  in this case the "e" will cause the sequence to reset
     // modifier keys are ignored because you can have a sequence that contains modifiers such as "enter ctrl+space" and in most cases the modifier key will be pressed before the next key
     // also if you have a sequence such as "ctrl+b a" then pressing the "b" key will trigger a "keypress" and a "keydown"
-    // the "keydown" is expected when there is a modifier, but the "keypress" ends up matching the _nextExpectedAction since it occurs after and that causes the sequence to reset
+    // the "keydown" is expected when there is a modifier, but the "keypress" ends up matching the nextExpectedEventName since it occurs after and that causes the sequence to reset
     // we ignore keypresses in a sequence that directly follow a keydown for the same character
-    const ignoreThisKeypress = event.type == Action.Keypress && !!this.ignoreNextKeypress;
-    if (event.type == this.nextExpectedAction && !isModifier(character) && !ignoreThisKeypress) {
+    const ignoreThisKeypress = event.type == EventType.Keypress && !!this.ignoreNextKeypress;
+    if (event.type == this.nextExpectedEventName && !isModifier(character) && !ignoreThisKeypress) {
       this.resetSequences(doNotReset);
     }
 
@@ -132,14 +188,14 @@ export class HandlerMap {
     level?: number
   ) {
     const matches = [];
-    const action = event.type;
+    const eventType = event.type;
 
     if (!this.handlers[character]) {
       return [];
     }
 
     // if a modifier key is coming up on its own we should allow it
-    if (action == Action.Keyup && isModifier(character)) {
+    if (eventType == EventType.Keyup && isModifier(character)) {
       modifiers = [character];
     }
 
@@ -148,14 +204,14 @@ export class HandlerMap {
       if (!sequenceName && handler.seq && this.sequenceLevels[handler.seq] != handler.level) {
         continue;
       }
-      // if the action we are looking for doesn't match the action we got then we should keep going
-      if (action != handler.action) {
+      // if the event type we are looking for doesn't match the event type we got then we should keep going
+      if (eventType != handler.eventType) {
         continue;
       }
 
       // if this is a keypress event and the meta key and control key are not pressed that means that we need to only look at the character, otherwise check the modifiers as well
       // chrome will not fire a keypress if meta or control is down, safari will fire a keypress if meta or meta+shift is down, firefox will fire a keypress if meta or control is down
-      if ((action == Action.Keypress && !event.metaKey && !event.ctrlKey) || modifiersMatch(modifiers, handler.modifiers)) {
+      if ((eventType == EventType.Keypress && !event.metaKey && !event.ctrlKey) || modifiersMatch(modifiers, handler.modifiers)) {
         // when you bind a combination or sequence a second time it should overwrite the first one.  if a sequenceName or combination is specified in this call it does just that
         var deleteCombo = !sequenceName && handler.combo == combination;
         var deleteSequence = sequenceName && handler.seq == sequenceName && handler.level == level;
@@ -173,7 +229,7 @@ export class HandlerMap {
   /**
    * binds a single keyboard combination
    */
-  bindSingle(combination: string, callback: SpicyKeysCallback, action?: Action, sequenceName?: string, level?: number) {
+  bindSingle(combination: string, callback: SpicyKeysCallback, eventType?: EventType, sequenceName?: string, level?: number) {
     // make sure multiple spaces in a row become a single space
     combination = combination.replace(/\s+/g, " ");
     const sequence = combination.split(" ");
@@ -185,7 +241,7 @@ export class HandlerMap {
       return;
     }
 
-    const info = getKeyInfo(combination, action);
+    const info = getKeyInfo(combination, eventType);
     let list = this.handlers[info.key];
     if (!list) {
       list = [];
@@ -193,12 +249,12 @@ export class HandlerMap {
     }
 
     // remove an existing match if there is one
-    this.getMatches(info.key, info.modifiers, { type: info.action } as KeyboardEvent, sequenceName, combination, level);
+    this.getMatches(info.key, info.modifiers, { type: info.eventType } as KeyboardEvent, sequenceName, combination, level);
 
-    const handler: Handler = {
+    const handler: ActionHandler = {
       callback: callback,
       modifiers: info.modifiers,
-      action: info.action,
+      eventType: info.eventType,
       seq: sequenceName,
       level: level,
       combo: combination,
@@ -226,11 +282,12 @@ export class HandlerMap {
     }
 
     if (!activeSequences) {
-      this.nextExpectedAction = false;
+      this.nextExpectedEventName = false;
     }
+    this.debug("resetting sequences, doNotReset: ", doNotReset);
   }
 
-  private fireCallback(handler: Handler, event: KeyboardEvent) {
+  private fireCallback(handler: ActionHandler, event: KeyboardEvent) {
     // if this event should not happen stop here
     if (this.shouldStopCallback(event, (event.target || event.srcElement) as Element, handler.combo, handler.seq)) {
       return;
@@ -264,5 +321,11 @@ export class HandlerMap {
 
     // stop for input, select, and textarea
     return element.tagName == "INPUT" || element.tagName == "SELECT" || element.tagName == "TEXTAREA" || (element as any).isContentEditable;
+  }
+
+  debug(...args: any[]) {
+    if (this.debugMode) {
+      console.debug("[spicykeys]", ...args);
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { Action, KEYCODE_MAP, MAP, REVERSE_MAP, SHIFT_MAP, SPECIAL_ALIASES } from "./Keymaps";
+import { EventType, KEYCODE_MAP, MAP, REVERSE_MAP, SHIFT_MAP, SPECIAL_ALIASES } from "./Keymaps";
 
 export const characterFromEvent = (event: KeyboardEvent) => {
   // for keypress events we should return the character as is
@@ -77,13 +77,13 @@ export const keysFromString = (combination: string): string[] => {
 export interface KeyInfo {
   key: string;
   modifiers: Modifier[];
-  action: Action;
+  eventType: EventType;
 }
 
 /**
  * Gets info for a specific key combination
  */
-export const getKeyInfo = (combination: string, action?: Action): KeyInfo => {
+export const getKeyInfo = (combination: string, eventType?: EventType): KeyInfo => {
   const modifiers: Modifier[] = [];
 
   // take the keys from this pattern and figure out what the actual pattern is all about
@@ -97,7 +97,7 @@ export const getKeyInfo = (combination: string, action?: Action): KeyInfo => {
     }
 
     // if this is not a keypress event then we should be smart about using shift keys this will only work for US keyboards however
-    if (action && action != Action.Keypress && SHIFT_MAP[key]) {
+    if (eventType && eventType != EventType.Keypress && SHIFT_MAP[key]) {
       key = SHIFT_MAP[key];
       modifiers.push("shift");
     }
@@ -111,19 +111,19 @@ export const getKeyInfo = (combination: string, action?: Action): KeyInfo => {
   }
 
   // if no action was picked in we should try to pick the one that we think would work best for this key
-  if (!action) {
-    action = REVERSE_MAP[lastKey] ? Action.Keydown : Action.Keypress;
+  if (!eventType) {
+    eventType = REVERSE_MAP[lastKey] ? EventType.Keydown : EventType.Keypress;
   }
 
   // modifier keys don't work as expected with keypress, switch to keydown
-  if (action == Action.Keypress && modifiers.length) {
-    action = Action.Keydown;
+  if (eventType == EventType.Keypress && modifiers.length) {
+    eventType = EventType.Keydown;
   }
 
   return {
     key: lastKey,
     modifiers: modifiers,
-    action: action,
+    eventType: eventType,
   };
 };
 

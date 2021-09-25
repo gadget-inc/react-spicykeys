@@ -1,5 +1,5 @@
 /** Which DOM event we might be handling */
-export enum Action {
+export enum EventType {
   Keypress = "keypress",
   Keyup = "keyup",
   Keydown = "keydown",
@@ -105,7 +105,7 @@ for (i = 0; i <= 9; ++i) {
   MAP[i + 96] = i.toString();
 }
 
-// Stores the flipped version of _MAP from above needed to check if we should use keypress or not when no action is specified
+// Stores the flipped version of _MAP from above needed to check if we should use keypress or not when no event type is specified
 export const REVERSE_MAP: { [char: string]: number } = {};
 
 for (const key of Object.keys(MAP) as any as number[]) {

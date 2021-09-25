@@ -6,6 +6,27 @@ Add keyboard event handlers to your React application. Features:
 - ignore parent keyboard events in certain inner component trees
 - support for individual keypresses (like `space`), key chords (like `ctrl+s`), and key sequences (like `g v G`)
 - full React 18 & Concurrent Mode support
+- Comes with full, accurate TypeScript types.
+
+## Installation
+
+Install the package from NPM or Yarn:
+
+```
+npm install react-spicykeys
+```
+
+or
+
+```
+yarn add react-spicykeys
+```
+
+`react-spicykeys` has TypeScript types right in the package.
+
+## Usage
+
+You can add keyhandlers that work regardless of where the user's current focus is with the `useSpicyKeys` hook or the `SpicyKeys` component. Both accept either a list of
 
 ### Approach Notes
 
