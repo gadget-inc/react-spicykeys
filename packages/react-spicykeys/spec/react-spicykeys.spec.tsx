@@ -1,6 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { SpicyKeys } from "../lib/SpicyKeys";
-import { AEvent, BEvent, SpaceEvent } from "./events";
+import { KeyEventHelper } from "./KeyEventHelper";
 
 describe("listening to key events", () => {
   test("calls handlers registered globally are called when keydown/keyup events are dispatched on the body", () => {
@@ -9,8 +9,7 @@ describe("listening to key events", () => {
 
     document.body.focus();
     expect(fn).not.toHaveBeenCalled();
-    fireEvent.keyDown(document.body, { key: "Enter", code: "Enter", which: 13 });
-    fireEvent.keyUp(document.body, { key: "Enter", code: "Enter", which: 13 });
+    KeyEventHelper.simulate("enter");
     expect(fn).toHaveBeenCalled();
   });
 
@@ -26,8 +25,7 @@ describe("listening to key events", () => {
     const element = screen.getByTestId("foobar");
     element.focus();
     expect(fn).not.toHaveBeenCalled();
-    fireEvent.keyDown(element, { key: "Enter", code: "Enter", which: 13 });
-    fireEvent.keyUp(element, { key: "Enter", code: "Enter", which: 13 });
+    KeyEventHelper.simulate("enter", element);
     expect(fn).toHaveBeenCalled();
   });
 
@@ -37,8 +35,7 @@ describe("listening to key events", () => {
 
     document.body.focus();
     expect(fn).not.toHaveBeenCalled();
-    fireEvent.keyDown(document.body, SpaceEvent);
-    fireEvent.keyUp(document.body, SpaceEvent);
+    KeyEventHelper.simulate("space");
     expect(fn).not.toHaveBeenCalled();
   });
 
@@ -54,8 +51,7 @@ describe("listening to key events", () => {
     const element = screen.getByTestId("foobar");
     element.focus();
     expect(fn).not.toHaveBeenCalled();
-    fireEvent.keyDown(element, SpaceEvent);
-    fireEvent.keyUp(element, SpaceEvent);
+    KeyEventHelper.simulate("space", element);
     expect(fn).not.toHaveBeenCalled();
   });
 
@@ -65,7 +61,7 @@ describe("listening to key events", () => {
 
     document.body.focus();
     expect(fn).not.toHaveBeenCalled();
-    fireEvent.keyPress(document.body, AEvent);
+    KeyEventHelper.simulate("a");
     expect(fn).toHaveBeenCalled();
   });
 
@@ -81,7 +77,7 @@ describe("listening to key events", () => {
     const element = screen.getByTestId("foobar");
     element.focus();
     expect(fn).not.toHaveBeenCalled();
-    fireEvent.keyPress(document.body, AEvent);
+    KeyEventHelper.simulate("a");
     expect(fn).toHaveBeenCalled();
   });
 
@@ -95,11 +91,11 @@ describe("listening to key events", () => {
     expect(A).not.toHaveBeenCalled();
     expect(B).not.toHaveBeenCalled();
     expect(C).not.toHaveBeenCalled();
-    fireEvent.keyPress(document.body, BEvent);
+    KeyEventHelper.simulate("b");
     expect(A).not.toHaveBeenCalled();
     expect(B).toHaveBeenCalled();
     expect(C).not.toHaveBeenCalled();
-    fireEvent.keyPress(document.body, AEvent);
+    KeyEventHelper.simulate("a");
     expect(A).toHaveBeenCalledTimes(1);
     expect(B).toHaveBeenCalledTimes(1);
     expect(C).not.toHaveBeenCalled();

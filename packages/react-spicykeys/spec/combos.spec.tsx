@@ -1,6 +1,6 @@
 import { fireEvent, render } from "@testing-library/react";
 import { SpicyKeys } from "../lib/SpicyKeys";
-import { CtrlEvent, ZEvent } from "./events";
+import { CtrlEvent, KeyEventHelper, ZEvent } from "./KeyEventHelper";
 
 describe("listening to key combinations", () => {
   test("doesn't call handlers when the first modifier key of a combo is pressed", () => {
@@ -30,11 +30,7 @@ describe("listening to key combinations", () => {
 
     document.body.focus();
     expect(fn).not.toHaveBeenCalled();
-    fireEvent.keyDown(document.body, CtrlEvent);
-    fireEvent.keyDown(document.body, { ...ZEvent, ctrlKey: true });
-    fireEvent.keyPress(document.body, { ...ZEvent, which: 26 });
-    fireEvent.keyUp(document.body, ZEvent);
-    fireEvent.keyUp(document.body, CtrlEvent);
+    KeyEventHelper.simulate("z", undefined, ["ctrl"]);
     expect(fn).toHaveBeenCalled();
   });
 });
