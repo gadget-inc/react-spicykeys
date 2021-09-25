@@ -24,9 +24,13 @@ yarn add react-spicykeys
 
 `react-spicykeys` has TypeScript types right in the package.
 
+## Status
+
+Prerelease -- not done yet.
+
 ## Usage
 
-You can add keyhandlers that work regardless of where the user's current focus is with the `useSpicyKeys` hook or the `SpicyKeys` component. Both accept either a list of
+You can add keyhandlers that work regardless of where the user's current focus is with the `useSpicyKeys` hook or the `SpicyKeys` component.
 
 ### Approach Notes
 

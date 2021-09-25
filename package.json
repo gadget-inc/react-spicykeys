@@ -16,6 +16,8 @@
     "watch": "yarn workspace react-spicykeys tsc -w",
     "start-sandbox": "yarn workspace sandbox react-scripts start",
     "lint": "yarn run lint:prettier && yarn run lint:eslint",
+    "release": "yarn workspace fastify-renderer publish",
+    "prerelease": "yarn workspace fastify-renderer run gitpkg publish",
     "lint:prettier": "node --max-old-space-size=4096 node_modules/.bin/prettier --check \"packages/**/*.{js,ts,tsx}\"",
     "lint:eslint": "node --max-old-space-size=4096 node_modules/.bin/eslint --quiet --ext ts,tsx packages",
     "lint:fix": "node --max-old-space-size=4096 node_modules/.bin/prettier --write --check \"packages/**/*.{js,ts,tsx}\" && eslint --ext ts,tsx --fix packages"

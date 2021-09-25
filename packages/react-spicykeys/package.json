@@ -22,6 +22,7 @@
     "babel-jest": "^27.2.2",
     "eslint": "^7.32.0",
     "jest": "^27.2.2",
+    "keycode": "^2.2.0",
     "prettier": "^2.4.1",
     "react-scripts": "4.0.3",
     "ts-node": "^10.2.1",
@@ -36,6 +37,7 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
+    "prepublishOnly": "npm run build",
     "start-sandbox": "cd sandbox && react-scripts start"
   },
   "browserslist": {

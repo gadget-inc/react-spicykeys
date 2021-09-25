@@ -105,7 +105,7 @@ export class HandlerRegistry {
     }
 
     const character = characterFromEvent(event);
-    this.debug("handling event for character", { character, which: event.which, event });
+    this.debug("handling event for character", { character, which: event.which, type: event.type });
 
     // no character found then stop
     if (!character) {
