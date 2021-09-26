@@ -100,4 +100,79 @@ describe("listening to key events", () => {
     expect(B).toHaveBeenCalledTimes(1);
     expect(C).not.toHaveBeenCalled();
   });
+
+  it("capslock key is ignored", function () {
+    const fn = jest.fn();
+    render(<SpicyKeys keys={{ a: fn }} />);
+
+    expect(fn).not.toHaveBeenCalled();
+    KeyEventHelper.simulate("a");
+    expect(fn).toHaveBeenCalledTimes(1);
+    KeyEventHelper.simulate("A"); // same `event.keyCode`, different `event.key`
+    expect(fn).toHaveBeenCalledTimes(2);
+
+    // shift a should not trigger the handler
+    KeyEventHelper.simulate("A", undefined, ["shift"]);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("fires events for special characters", function () {
+    const fn = jest.fn();
+    render(<SpicyKeys keys={{ "*": fn }} />);
+
+    expect(fn).not.toHaveBeenCalled();
+    KeyEventHelper.simulate("*");
+    expect(fn).toHaveBeenCalled();
+  });
+
+  it("fires events for keys with no character", function () {
+    const fn = jest.fn();
+    render(<SpicyKeys keys={{ left: fn }} />);
+
+    expect(fn).not.toHaveBeenCalled();
+    KeyEventHelper.simulate("left");
+    expect(fn).toHaveBeenCalled();
+  });
+
+  it("binding the plus key as a symbol should fire handlers", function () {
+    const fn = jest.fn();
+    render(<SpicyKeys keys={{ "+": fn }} />);
+
+    expect(fn).not.toHaveBeenCalled();
+    KeyEventHelper.simulate("+");
+    expect(fn).toHaveBeenCalled();
+
+    KeyEventHelper.simulate([43, 187], undefined, ["shift"]);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it('binding plus key as the "plus" literal should fire handlers', function () {
+    const fn = jest.fn();
+    render(<SpicyKeys keys={{ plus: fn }} />);
+
+    expect(fn).not.toHaveBeenCalled();
+    KeyEventHelper.simulate("+");
+    expect(fn).toHaveBeenCalled();
+
+    KeyEventHelper.simulate([43, 187], undefined, ["shift"]);
+    expect(fn).toHaveBeenCalledTimes(2);
+  });
+
+  it("binding to chords with the plus key should fire handlers", function () {
+    const fn = jest.fn();
+    render(<SpicyKeys keys={{ "alt++": fn }} />);
+
+    expect(fn).not.toHaveBeenCalled();
+    KeyEventHelper.simulate("+", undefined, ["alt"]);
+    expect(fn).toHaveBeenCalled();
+  });
+
+  it("binding to multi-modifier chords with the plus key should fire handlers", function () {
+    const fn = jest.fn();
+    render(<SpicyKeys keys={{ "alt+shift++": fn }} />);
+
+    expect(fn).not.toHaveBeenCalled();
+    KeyEventHelper.simulate("+", undefined, ["shift", "alt"]);
+    expect(fn).toHaveBeenCalled();
+  });
 });

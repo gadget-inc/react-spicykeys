@@ -44,7 +44,7 @@ type ActionHandler = {
 };
 
 export class HandlerRegistry {
-  debugMode = true;
+  debugMode = false;
   protected root?: HTMLElement;
 
   private ignoreNextKeyup: false | string = false;
@@ -105,7 +105,8 @@ export class HandlerRegistry {
     }
 
     const character = characterFromEvent(event);
-    this.debug("handling event for character", { character, which: event.which, type: event.type });
+    const modifiers = eventModifiers(event);
+    this.debug("handling event for character", { character, which: event.which, type: event.type, modifiers });
 
     // no character found then stop
     if (!character) {
@@ -118,7 +119,7 @@ export class HandlerRegistry {
       return;
     }
 
-    this.handleKey(character, eventModifiers(event), event);
+    this.handleKey(character, modifiers, event);
   };
 
   private handleKey(character: string, modifiers: Modifier[], event: KeyboardEvent) {
@@ -159,7 +160,7 @@ export class HandlerRegistry {
         this.fireCallback(handler, event);
       }
 
-      this.debug("handled key event with handler", event, handler);
+      this.debug("handled key event with handler", { character, which: event.which, type: event.type }, handler);
     }
 
     // if the key you pressed matches the type of sequence without being a modifier (ie "keyup" or "keypress") then we should reset all sequences that were not matched by this event

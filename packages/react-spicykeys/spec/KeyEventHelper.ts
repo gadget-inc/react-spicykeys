@@ -18,8 +18,8 @@ export class KeyEventHelper {
     this.charCode = data.charCode ?? 0;
 
     const modifiers = data.modifiers ?? [];
-    for (const _ of modifiers) {
-      (this as any)[modifiers + "Key"] = true;
+    for (const modifier of modifiers) {
+      (this as any)[modifier + "Key"] = true;
     }
   }
 
@@ -47,7 +47,7 @@ export class KeyEventHelper {
   // simulates complete key event as if the user pressed the key in the browser
   // triggers a keydown, then a keypress, then a keyup
   static simulate(
-    key: string,
+    key: string | [number, number],
     element: HTMLElement = document.body,
     modifiers: Modifier[] = [],
     repeat = 1,
@@ -65,14 +65,20 @@ export class KeyEventHelper {
       // closed shadow dom
       element = options.shadowHost;
     }
-    let charCode;
-    if (key.length === 1) {
-      charCode = key.charCodeAt(0);
-    } else {
-      charCode = 0;
-    }
+    let charCode: number;
+    let keyCode: number;
+    if (typeof key == "string") {
+      if (key.length === 1) {
+        charCode = key.charCodeAt(0);
+      } else {
+        charCode = 0;
+      }
 
-    const keyCode = keycode(key);
+      keyCode = keycode(key);
+    } else {
+      charCode = key[0];
+      keyCode = key[1];
+    }
 
     const modifierToKeyCode = {
       shift: 16,
@@ -91,13 +97,13 @@ export class KeyEventHelper {
     const keyEvents = [];
 
     // modifiers would go down first
-    for (var i = 0; i < modifiers.length; i++) {
-      modifiersToInclude.push(modifiers[i]);
+    for (const modifier of modifiers) {
+      modifiersToInclude.push(modifier);
       keyEvents.push(
         new KeyEventHelper(
           {
             charCode: 0,
-            keyCode: modifierToKeyCode[modifiers[i]],
+            keyCode: modifierToKeyCode[modifier],
             modifiers: modifiersToInclude,
           },
           EventType.Keydown
@@ -144,7 +150,7 @@ export class KeyEventHelper {
     );
 
     // now lift up the modifier keys
-    for (i = 0; i < modifiersToInclude.length; i++) {
+    for (let i = 0; i < modifiersToInclude.length; i++) {
       var modifierKeyCode = modifierToKeyCode[modifiersToInclude[i]];
       modifiersToInclude.splice(i, 1);
       keyEvents.push(
@@ -159,7 +165,7 @@ export class KeyEventHelper {
       );
     }
 
-    for (i = 0; i < keyEvents.length; i++) {
+    for (let i = 0; i < keyEvents.length; i++) {
       // console.log('firing', keyEvents[i].type, keyEvents[i].keyCode, keyEvents[i].charCode);
       keyEvents[i].fire(element);
     }
