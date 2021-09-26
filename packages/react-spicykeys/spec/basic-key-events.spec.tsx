@@ -1,8 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { SpicyKeys } from "../lib/SpicyKeys";
+import { rootRegistry } from "../lib/SpicyKeysContext";
 import { KeyEventHelper } from "./KeyEventHelper";
 
 describe("listening to key events", () => {
+  beforeEach(() => {
+    rootRegistry.reset();
+    jest.clearAllTimers();
+  });
+
   test("calls handlers registered globally are called when keydown/keyup events are dispatched on the body", () => {
     const fn = jest.fn();
     render(<SpicyKeys keys={{ enter: fn }} />);

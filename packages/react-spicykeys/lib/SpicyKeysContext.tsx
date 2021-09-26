@@ -2,7 +2,7 @@ import React, { createContext, ReactNode, useContext, useMemo } from "react";
 import { HandlerRegistry } from "./HandlerRegistry";
 
 // start with a handler map that will automatically listen for keyevents on the body
-const rootRegistry = new HandlerRegistry();
+export const rootRegistry = new HandlerRegistry();
 export const RegistryContext = createContext<HandlerRegistry>(rootRegistry);
 
 export const useSpicyKeysRegistry = () => {

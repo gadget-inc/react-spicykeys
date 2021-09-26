@@ -1,9 +1,15 @@
 import { render } from "@testing-library/react";
 import { Modifier } from "../lib/helpers";
 import { SpicyKeys } from "../lib/SpicyKeys";
+import { rootRegistry } from "../lib/SpicyKeysContext";
 import { KeyEventHelper } from "./KeyEventHelper";
 
 describe("strange keycodes call the right event type", function () {
+  beforeEach(() => {
+    rootRegistry.reset();
+    jest.clearAllTimers();
+  });
+
   const keys: Record<string, [string, number, Modifier[] | undefined][]> = {
     keypress: [
       ["a", 65, []],

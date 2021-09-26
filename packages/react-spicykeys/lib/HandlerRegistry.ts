@@ -51,7 +51,8 @@ export class HandlerRegistry {
   private ignoreNextKeypress: boolean = false;
   private handlers: { [character: string]: ActionHandler[] } = {};
   private sequenceLevels: { [sequence: string]: number } = {};
-  private nextExpectedEventName: false | EventType = false;
+  private nextExpectedEventType: false | EventType = false;
+  private resetTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(root?: HTMLElement) {
     if (!root && typeof window != "undefined") {
@@ -170,7 +171,7 @@ export class HandlerRegistry {
     // the "keydown" is expected when there is a modifier, but the "keypress" ends up matching the nextExpectedEventName since it occurs after and that causes the sequence to reset
     // we ignore keypresses in a sequence that directly follow a keydown for the same character
     const ignoreThisKeypress = event.type == EventType.Keypress && !!this.ignoreNextKeypress;
-    if (event.type == this.nextExpectedEventName && !isModifier(character) && !ignoreThisKeypress) {
+    if (event.type == this.nextExpectedEventType && !isModifier(character) && !ignoreThisKeypress) {
       this.resetSequences(doNotReset);
     }
 
@@ -237,8 +238,7 @@ export class HandlerRegistry {
 
     // if this pattern is a sequence of keys then run through this method to reprocess each pattern one key at a time
     if (sequence.length > 1) {
-      throw new Error("sequences not yet implemented");
-      // _bindSequence(combination, sequence, callback, action);
+      this.bindSequence(combination, sequence, callback, eventType);
       return;
     }
 
@@ -269,9 +269,81 @@ export class HandlerRegistry {
     }
   }
 
+  /**
+   * binds a key sequence to an event
+   */
+  bindSequence(combo: string, keys: string[], callback: SpicyKeysCallback, eventType?: EventType) {
+    // start off by adding a sequence level record for this combination and setting the level to 0
+    this.sequenceLevels[combo] = 0;
+    const rootHandler: ActionHandler = {
+      callback,
+      eventType: eventType || EventType.Keydown,
+      combo,
+      modifiers: [],
+      seq: keys[0],
+      level: -1,
+    };
+
+    /**
+     * callback to increase the sequence level for this sequence and reset all other sequences that were active
+     */
+    const increaseSequence = (nextEventType: EventType) => {
+      return () => {
+        this.nextExpectedEventType = nextEventType;
+        this.sequenceLevels[combo] += 1;
+        this.restartSequenceExpiryTimer();
+      };
+    };
+
+    /**
+     * wraps the specified callback inside of another function in order to reset all sequence counters as soon as this sequence is done
+     */
+    const callbackAndReset = (event: KeyboardEvent) => {
+      this.fireCallback(rootHandler, event);
+
+      // we should ignore the next key up if the action is key down or keypress.  this is so if you finish a sequence and release the key the final key will not trigger a keyup
+      if (eventType !== EventType.Keyup) {
+        this.ignoreNextKeyup = characterFromEvent(event);
+      }
+
+      // weird race condition if a sequence ends with the key another sequence begins with
+      setTimeout(this.resetSequences, 10);
+    };
+
+    // loop through keys one at a time and bind the appropriate callback function.  for any key leading up to the final one it should increase the sequence. after the final, it should reset all sequences
+    //
+    // if an action is specified in the original bind call then that will be used throughout.  otherwise we will pass the action that the next key in the sequence should match.  this allows a sequence to mix and match keypress and keydown events depending on which ones are better suited to the key provided
+    for (var i = 0; i < keys.length; ++i) {
+      var isFinal = i + 1 === keys.length;
+      var wrappedCallback = isFinal ? callbackAndReset : increaseSequence(eventType || getKeyInfo(keys[i + 1]).eventType);
+      this.bindSingle(keys[i], wrappedCallback, eventType, combo, i);
+    }
+  }
+
   unbind(combination: string, callback: SpicyKeysCallback) {}
 
-  private resetSequences(doNotReset: Record<string, number> = {}) {
+  reset() {
+    this.handlers = {};
+    if (this.resetTimer) {
+      clearTimeout(this.resetTimer);
+    }
+    this.ignoreNextKeyup = false;
+    this.ignoreNextKeypress = false;
+    this.sequenceLevels = {};
+    this.nextExpectedEventType = false;
+  }
+  /**
+   * called to set a 1 second timeout on the specified sequence
+   * this is so after each key press in the sequence the user has 1 second to press the next key before they must start over
+   */
+  private restartSequenceExpiryTimer() {
+    if (this.resetTimer) {
+      clearTimeout(this.resetTimer);
+    }
+    this.resetTimer = setTimeout(this.resetSequences, 1000);
+  }
+
+  private resetSequences = (doNotReset: Record<string, number> = {}) => {
     let activeSequences = false;
 
     for (const key in this.sequenceLevels) {
@@ -283,10 +355,10 @@ export class HandlerRegistry {
     }
 
     if (!activeSequences) {
-      this.nextExpectedEventName = false;
+      this.nextExpectedEventType = false;
     }
     this.debug("resetting sequences, doNotReset: ", doNotReset);
-  }
+  };
 
   private fireCallback(handler: ActionHandler, event: KeyboardEvent) {
     // if this event should not happen stop here

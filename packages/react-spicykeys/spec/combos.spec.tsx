@@ -1,8 +1,14 @@
 import { fireEvent, render } from "@testing-library/react";
 import { SpicyKeys } from "../lib/SpicyKeys";
+import { rootRegistry } from "../lib/SpicyKeysContext";
 import { CtrlEvent, KeyEventHelper, ZEvent } from "./KeyEventHelper";
 
 describe("listening to key combinations", () => {
+  beforeEach(() => {
+    rootRegistry.reset();
+    jest.clearAllTimers();
+  });
+
   test("doesn't call handlers when the first modifier key of a combo is pressed", () => {
     const fn = jest.fn();
     render(<SpicyKeys keys={{ "ctrl+z": fn }} />);
