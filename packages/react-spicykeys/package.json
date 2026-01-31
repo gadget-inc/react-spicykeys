@@ -20,7 +20,7 @@
     "@types/react": "^17.0.24",
     "@types/react-dom": "^17.0.9",
     "babel-jest": "^27.2.2",
-    "eslint": "^7.32.0",
+    "eslint": "^9.26.0",
     "jest": "^27.2.2",
     "keycode": "^2.2.0",
     "prettier": "^2.4.1",
